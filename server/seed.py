@@ -1,56 +1,72 @@
-import json
-import random
-from config import db, app
-from models import Episode, Guest, Appearance, episode_guests
+# seed.py
 
-with app.app_context():
+from faker import Faker
+from models import db, Episode, Guest, Appearance  # Adjust import based on your structure
 
-    # Delete all rows in tables
-    db.session.query(episode_guests).delete()
-    db.session.query(Episode).delete()
-    db.session.query(Guest).delete()
-    db.session.query(Appearance).delete()
+fake = Faker()
+
+def create_fake_guests(num_guests=10):
+    guests = []
+    for _ in range(num_guests):
+        guest = Guest(
+            name=fake.name(),
+            occupation=fake.job()
+        )
+        guests.append(guest)
+    return guests
+
+def create_fake_episodes(num_episodes=10):
+    episodes = []
+    for _ in range(num_episodes):
+        episode = Episode(
+            date=fake.date(),
+            number=fake.random_int(min=1, max=100)
+        )
+        episodes.append(episode)
+    return episodes
+
+def create_fake_appearances(episodes, guests):
+    appearances = []
+    for episode in episodes:
+        # Randomly select a guest for this episode
+        guest = fake.random_element(elements=guests)
+        # Create a random rating
+        rating = fake.random_int(min=1, max=5)
+        
+        appearance = Appearance(
+            rating=rating,
+            episode=episode,
+            guest=guest
+        )
+        appearances.append(appearance)
+    return appearances
+
+def seed_database():
+    # Clear existing data
+    db.drop_all()
+    db.create_all()
+
+    # Create fake data
+    guests = create_fake_guests(num_guests=10)
+    episodes = create_fake_episodes(num_episodes=10)
+    
+    # Add guests and episodes to the session
+    db.session.add_all(guests)
+    db.session.add_all(episodes)
+    db.session.commit()  # Commit to generate IDs before creating appearances
+
+    # Create appearances
+    appearances = create_fake_appearances(episodes, guests)
+    
+    # Add appearances to the session
+    db.session.add_all(appearances)
+    
+    # Commit the session to save data
     db.session.commit()
+    
+    print("Database seeded successfully!")
 
-    # Load data from seed.json
-    try:
-        with open('seed.json', 'r') as f:
-            data = json.load(f)  
-    except FileNotFoundError:
-        print("seed.json not found")
-        exit()
-    except json.JSONDecodeError:
-        print("Invalid JSON in seed.json")
-        exit()
-    episode_counter = 0
-
-    for entry in data:
-        # Extracting relevant fields from each entry
-        year = entry['YEAR']
-        occupation = entry['GoogleKnowlege_Occupation']
-        show_date = entry['Show']
-        raw_guest_list = entry['Raw_Guest_List']
-
-        # Create a new Guest object
-        guest = Guest(name=raw_guest_list, occupation=occupation)
-
-        # Create a new Episode object
-        episode = Episode(date=show_date, number=episode_counter)
-
-        # Random rating
-        random_rating = random.randint(1, 5)
-
-        # Create an Appearance object that associates the Guest with the Episode
-        appearance = Appearance(rating=random_rating, guest=guest, episode=episode)
-
-        # Add the objects to the session
-        db.session.add(guest)
-        db.session.add(episode)
-        db.session.add(appearance)
-
-        # Increment episode counter for the next event
-        episode_counter += 1
-
-    # Commit the session to save the changes
-    db.session.commit()
-    print("Data seeded successfully!")
+if __name__ == "__main__":
+    from app import app  # Adjust import based on your structure
+    with app.app_context():
+        seed_database()
