@@ -123,11 +123,3 @@ To seed the database with fake data, run the `seed.py` script. This will create 
 
 
 After running the seeding script, you should see a message indicating that the database has been seeded successfully.
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for more details.
-
-Feel free to modify the README according to your specific needs or additional features!
-
-This README provides a comprehensive guide for users and developers to understand and use your Flask application effectively.
